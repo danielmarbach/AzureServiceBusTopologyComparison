@@ -1,7 +1,5 @@
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Subscriber.Models;
 
@@ -154,7 +152,7 @@ public class ServiceBusInitializationService(
                     var ruleName = $"MessageTypeFilter_{i}";
                     var ruleOptions = new CreateRuleOptions(
                         ruleName,
-                        new SqlRuleFilter($"sys.MessageType LIKE '%{hierarchyTypes[1]}%'"));
+                        new SqlRuleFilter($"[MessageType] LIKE '%{hierarchyTypes[1]}%'"));
 
                     await adminClient.CreateRuleAsync(BundleTopicName, subscriptionName, ruleOptions,
                         cancellationToken);

@@ -1,9 +1,4 @@
-﻿using Azure.Identity;
-using Azure.Messaging.ServiceBus;
-using Azure.Messaging.ServiceBus.Administration;
-using Microsoft.Extensions.Azure;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Azure;
 using Publisher.Services;
 using Publisher.Models;
 

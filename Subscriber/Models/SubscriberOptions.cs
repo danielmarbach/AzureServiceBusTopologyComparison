@@ -11,5 +11,5 @@ public class SubscriberOptions
 
     public int NumberOfMessages { get; set; } = 4;
 
-    public int MaxConcurrentCalls { get; set; }
+    public int MaxConcurrentCalls { get; set; } = Environment.ProcessorCount;
 }
