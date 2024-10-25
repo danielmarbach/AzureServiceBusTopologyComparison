@@ -58,6 +58,64 @@ public class ServiceBusInitializationService(
     private async Task InitializeCorrelationFilterTopology(CancellationToken cancellationToken)
     {
         await CreateBundleTopicIfNecessary(cancellationToken);
+
+        // Create or update subscription with correlation filters
+        var subscriptionName = $"{_queueName}-sub";
+        var createSubscriptionOptions = new CreateSubscriptionOptions(TopicName, subscriptionName)
+        {
+            ForwardTo = _queueName
+        };
+
+        try
+        {
+            if (await adminClient.SubscriptionExistsAsync(TopicName, subscriptionName, cancellationToken))
+            {
+                await adminClient.DeleteSubscriptionAsync(TopicName, subscriptionName, cancellationToken);
+            }
+
+            logger.LogInformation(
+                "Creating subscription {SubscriptionName} with forwarding to {QueueName}", 
+                subscriptionName, _queueName);
+            
+            await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
+
+            // Create a correlation filter rule for each split message type
+            for (var i = 0; i < _messageTypeFilters.Length; i++)
+            {
+                var messageType = _messageTypeFilters[i];
+                var splitValues = messageType.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var value in splitValues)
+                {
+                    var ruleName = $"CorrelationFilter_{i}_{value.Trim()}";
+                    var ruleOptions = new CreateRuleOptions(
+                        ruleName,
+                        new CorrelationRuleFilter 
+                        { 
+                            ApplicationProperties = { { value.Trim(), true } } // Simplified initialization
+                        });
+
+                    await adminClient.CreateRuleAsync(TopicName, subscriptionName, ruleOptions, cancellationToken);
+                    logger.LogInformation("Created correlation rule {RuleName} for message type {MessageType}", 
+                        ruleName, messageType);
+                }
+            }
+
+            // Delete the default rule if it exists
+            try
+            {
+                await adminClient.DeleteRuleAsync(TopicName, subscriptionName, "$Default", cancellationToken);
+            }
+            catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
+            {
+                // Rule doesn't exist, that's fine
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error setting up subscription {SubscriptionName}", subscriptionName);
+            throw;
+        }
     }
 
     private async Task InitializeSqlFilterTopology(CancellationToken cancellationToken)

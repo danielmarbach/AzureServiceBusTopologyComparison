@@ -25,6 +25,7 @@ builder.Services.AddSingleton(sp =>
 
 // Register services in correct order
 builder.Services.AddHostedService<ServiceBusInitializationService>();
+builder.Services.AddHostedService<SubscriberService>();
 
 var host = builder.Build();
 await host.RunAsync();

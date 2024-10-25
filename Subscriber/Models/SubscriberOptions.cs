@@ -10,4 +10,6 @@ public class SubscriberOptions
         "Publisher.Messages.Test.TestMessageType",
         "Publisher.Messages.Other.OtherMessageType"
     };
+
+    public int MaxConcurrentCalls { get; set; }
 }

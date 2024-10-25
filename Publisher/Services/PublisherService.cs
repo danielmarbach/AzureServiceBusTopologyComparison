@@ -13,6 +13,7 @@ public class PublisherService(
     : BackgroundService
 {
     private readonly string[] _messageTypes = options.Value.MessageTypes;
+    private readonly string _topologyType = options.Value.TopologyType; // Inject topology type
     private const string TopicName = "bundle-1";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -34,6 +35,16 @@ public class PublisherService(
                         { "MessageType", messageType }
                     }
                 };
+
+                // Check topology type and add additional application properties if needed
+                if (_topologyType == "CorrelationFilter")
+                {
+                    var splitValues = messageType.Split([';'], StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var value in splitValues)
+                    {
+                        message.ApplicationProperties[value.Trim()] = true;
+                    }
+                }
 
                 messages.Add(message);
                 logger.LogInformation("Prepared message {MessageId} with MessageType {MessageType}",
