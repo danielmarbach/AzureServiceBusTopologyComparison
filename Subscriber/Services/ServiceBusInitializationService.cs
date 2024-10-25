@@ -85,16 +85,24 @@ public class ServiceBusInitializationService(
 
                 foreach (var hierarchyType in hierarchyTypes)
                 {
-                    var ruleName = $"CorrelationFilter_{i}_{hierarchyType.Trim()}";
+                    var hierarchyTypeTrimmed = hierarchyType.Trim();
+                    var ruleName = $"{hierarchyTypeTrimmed[..Math.Min(hierarchyTypeTrimmed.Length, 50)]}";
                     var ruleOptions = new CreateRuleOptions(
                         ruleName,
                         new CorrelationRuleFilter
                         {
-                            ApplicationProperties = { { hierarchyType.Trim(), true } }
+                            ApplicationProperties = { { hierarchyTypeTrimmed, true } }
                         });
 
-                    await adminClient.CreateRuleAsync(BundleTopicName, subscriptionName, ruleOptions,
-                        cancellationToken);
+                    try
+                    {
+                        await adminClient.CreateRuleAsync(BundleTopicName, subscriptionName, ruleOptions,
+                            cancellationToken);
+                    }
+                    catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+                    {
+                        // Rule exists already, that's fine
+                    }
                     logger.LogInformation("Created correlation rule {RuleName} for message type {MessageType}",
                         ruleName, messageType);
                 }
