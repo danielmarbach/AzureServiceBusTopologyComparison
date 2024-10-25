@@ -15,7 +15,8 @@ public class ServiceBusInitializationService(
 {
     private readonly string _queueName = options.Value.QueueName;
     private readonly string _topologyType = options.Value.TopologyType;
-    private const string TopicName = "bundle-1";
+    private readonly string[] _messageTypes = options.Value.MessageTypes;
+    private const string BundleTopicName = "bundle-1";
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -29,6 +30,9 @@ public class ServiceBusInitializationService(
                 break;
             case "CorrelationFilter":
                 await InitializeCorrelationFilterTopology(cancellationToken);
+                break;
+            case "MassTransit":
+                await CreateMassTransitTopology(cancellationToken);
                 break;
         }
     }
@@ -56,36 +60,47 @@ public class ServiceBusInitializationService(
 
     private async Task InitializeCorrelationFilterTopology(CancellationToken cancellationToken)
     {
-        await CreateTopic(cancellationToken);
+        await CreateTopic(BundleTopicName, cancellationToken);
     }
 
     private async Task InitializeSqlFilterTopology(CancellationToken cancellationToken)
     {
-        await CreateTopic(cancellationToken);
+        await CreateTopic(BundleTopicName, cancellationToken);
     }
 
-    private async Task CreateTopic(CancellationToken cancellationToken)
+    private async Task CreateMassTransitTopology(CancellationToken cancellationToken)
     {
-        // Topic initialization
-        try
+        foreach (var messageType in _messageTypes)
         {
-            if (!await adminClient.TopicExistsAsync(TopicName, cancellationToken))
+            // Create a topic for the message type
+            await CreateTopic(messageType, cancellationToken);
+
+            // Split the message type into subtypes and create a topic for each
+            var splitValues = messageType.Split([';'], StringSplitOptions.RemoveEmptyEntries);
+            foreach (var subtype in splitValues)
             {
-                try
-                {
-                    logger.LogInformation("Creating topic: {TopicName}", TopicName);
-                    await adminClient.CreateTopicAsync(TopicName, cancellationToken);
-                }
-                catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
-                {
-                    logger.LogInformation("Topic {TopicName} was created by another instance", TopicName);
-                }
+                await CreateTopic(subtype.Trim(), cancellationToken);
             }
         }
-        catch (Exception ex)
+    }
+
+    private async Task CreateTopic(string topicName, CancellationToken cancellationToken)
+    {
+        if (!await adminClient.TopicExistsAsync(topicName, cancellationToken))
         {
-            logger.LogError(ex, "Error initializing topic: {TopicName}", TopicName);
-            throw;
+            try
+            {
+                logger.LogInformation("Creating topic: {TopicName}", topicName);
+                await adminClient.CreateTopicAsync(topicName, cancellationToken);
+            }
+            catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+            {
+                logger.LogInformation("Topic {TopicName} was created by another instance", topicName);
+            }
+        }
+        else
+        {
+            logger.LogInformation("Topic already exists: {TopicName}", topicName);
         }
     }
 

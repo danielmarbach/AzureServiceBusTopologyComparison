@@ -16,7 +16,7 @@ public class ServiceBusInitializationService(
     private readonly string _queueName = options.Value.QueueName;
     private readonly string _topologyType = options.Value.TopologyType;
     private readonly string[] _messageTypeFilters = options.Value.MessageTypeFilters;
-    private const string TopicName = "bundle-1";
+    private const string BundleTopicName = "bundle-1";
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -30,6 +30,9 @@ public class ServiceBusInitializationService(
                 break;
             case "CorrelationFilter":
                 await InitializeCorrelationFilterTopology(cancellationToken);
+                break;
+            case "MassTransit":
+                await CreateMassTransitTopology(cancellationToken);
                 break;
         }
     }
@@ -57,20 +60,20 @@ public class ServiceBusInitializationService(
 
     private async Task InitializeCorrelationFilterTopology(CancellationToken cancellationToken)
     {
-        await CreateBundleTopicIfNecessary(cancellationToken);
+        await CreateTopic(BundleTopicName, cancellationToken);
 
         // Create or update subscription with correlation filters
         var subscriptionName = $"{_queueName}-sub";
-        var createSubscriptionOptions = new CreateSubscriptionOptions(TopicName, subscriptionName)
+        var createSubscriptionOptions = new CreateSubscriptionOptions(BundleTopicName, subscriptionName)
         {
             ForwardTo = _queueName
         };
 
         try
         {
-            if (await adminClient.SubscriptionExistsAsync(TopicName, subscriptionName, cancellationToken))
+            if (await adminClient.SubscriptionExistsAsync(BundleTopicName, subscriptionName, cancellationToken))
             {
-                await adminClient.DeleteSubscriptionAsync(TopicName, subscriptionName, cancellationToken);
+                await adminClient.DeleteSubscriptionAsync(BundleTopicName, subscriptionName, cancellationToken);
             }
 
             logger.LogInformation(
@@ -95,7 +98,7 @@ public class ServiceBusInitializationService(
                             ApplicationProperties = { { value.Trim(), true } } // Simplified initialization
                         });
 
-                    await adminClient.CreateRuleAsync(TopicName, subscriptionName, ruleOptions, cancellationToken);
+                    await adminClient.CreateRuleAsync(BundleTopicName, subscriptionName, ruleOptions, cancellationToken);
                     logger.LogInformation("Created correlation rule {RuleName} for message type {MessageType}", 
                         ruleName, messageType);
                 }
@@ -104,7 +107,7 @@ public class ServiceBusInitializationService(
             // Delete the default rule if it exists
             try
             {
-                await adminClient.DeleteRuleAsync(TopicName, subscriptionName, "$Default", cancellationToken);
+                await adminClient.DeleteRuleAsync(BundleTopicName, subscriptionName, "$Default", cancellationToken);
             }
             catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
             {
@@ -123,20 +126,20 @@ public class ServiceBusInitializationService(
         // Topic initialization
         try
         {
-            await CreateBundleTopicIfNecessary(cancellationToken);
+            await CreateTopic(BundleTopicName, cancellationToken);
 
             // Create or update subscription with forwarding
             var subscriptionName = $"{_queueName}-sub";
-            var createSubscriptionOptions = new CreateSubscriptionOptions(TopicName, subscriptionName)
+            var createSubscriptionOptions = new CreateSubscriptionOptions(BundleTopicName, subscriptionName)
             {
                 ForwardTo = _queueName
             };
 
             try
             {
-                if (await adminClient.SubscriptionExistsAsync(TopicName, subscriptionName, cancellationToken))
+                if (await adminClient.SubscriptionExistsAsync(BundleTopicName, subscriptionName, cancellationToken))
                 {
-                    await adminClient.DeleteSubscriptionAsync(TopicName, subscriptionName, cancellationToken);
+                    await adminClient.DeleteSubscriptionAsync(BundleTopicName, subscriptionName, cancellationToken);
                 }
 
                 logger.LogInformation(
@@ -154,7 +157,7 @@ public class ServiceBusInitializationService(
                         ruleName,
                         new SqlRuleFilter($"sys.MessageType LIKE '%{messageType}%'"));
 
-                    await adminClient.CreateRuleAsync(TopicName, subscriptionName, ruleOptions, cancellationToken);
+                    await adminClient.CreateRuleAsync(BundleTopicName, subscriptionName, ruleOptions, cancellationToken);
                     logger.LogInformation("Created rule {RuleName} for message type {MessageType}", 
                         ruleName, messageType);
                 }
@@ -162,7 +165,7 @@ public class ServiceBusInitializationService(
                 // Delete the default rule if it exists
                 try
                 {
-                    await adminClient.DeleteRuleAsync(TopicName, subscriptionName, "$Default", cancellationToken);
+                    await adminClient.DeleteRuleAsync(BundleTopicName, subscriptionName, "$Default", cancellationToken);
                 }
                 catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
                 {
@@ -177,24 +180,44 @@ public class ServiceBusInitializationService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error initializing topic: {TopicName}", TopicName);
+            logger.LogError(ex, "Error initializing topic: {BundleTopicName}", BundleTopicName);
             throw;
         }
     }
-
-    private async Task CreateBundleTopicIfNecessary(CancellationToken cancellationToken)
+    
+    private async Task CreateMassTransitTopology(CancellationToken cancellationToken)
     {
-        if (!await adminClient.TopicExistsAsync(TopicName, cancellationToken))
+        foreach (var messageType in _messageTypeFilters)
+        {
+            // Create a topic for the message type
+            await CreateTopic(messageType, cancellationToken);
+
+            // Split the message type into subtypes and create a topic for each
+            var splitValues = messageType.Split([';'], StringSplitOptions.RemoveEmptyEntries);
+            foreach (var subtype in splitValues)
+            {
+                await CreateTopic(subtype.Trim(), cancellationToken);
+            }
+        }
+    }
+
+    private async Task CreateTopic(string topicName, CancellationToken cancellationToken)
+    {
+        if (!await adminClient.TopicExistsAsync(topicName, cancellationToken))
         {
             try
             {
-                logger.LogInformation("Creating topic: {TopicName}", TopicName);
-                await adminClient.CreateTopicAsync(TopicName, cancellationToken);
+                logger.LogInformation("Creating topic: {TopicName}", topicName);
+                await adminClient.CreateTopicAsync(topicName, cancellationToken);
             }
             catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
             {
-                logger.LogInformation("Topic {TopicName} was created by another instance", TopicName);
+                logger.LogInformation("Topic {TopicName} was created by another instance", topicName);
             }
+        }
+        else
+        {
+            logger.LogInformation("Topic already exists: {TopicName}", topicName);
         }
     }
 
