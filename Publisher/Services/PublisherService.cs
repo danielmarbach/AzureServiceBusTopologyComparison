@@ -12,20 +12,21 @@ public class PublisherService(
     ILogger<PublisherService> logger)
     : BackgroundService
 {
-    private readonly string[] _messageTypes = options.Value.MessageTypes;
-    private readonly string _topologyType = options.Value.TopologyType; // Inject topology type
-    private const string TopicName = "bundle-1";
+    private readonly PublisherOptions _options = options.Value;
+    private const string BundleTopicName = "bundle-1";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await using var sender = serviceBusClient.CreateSender(TopicName);
+        await using var sender = serviceBusClient.CreateSender(_options.TopologyType == "MassTransit" ? _options.MessageTypeTemplate.Split(';', StringSplitOptions.RemoveEmptyEntries).First() : BundleTopicName);
+
         var messageId = 0;
-        var messages = new List<ServiceBusMessage>(_messageTypes.Length);
+        var messages = new List<ServiceBusMessage>(_options.NumberOfMessages);
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            foreach (var messageType in _messageTypes)
+            for (var i = 0; i < _options.NumberOfMessages; i++)
             {
+                var messageType = string.Format(_options.MessageTypeTemplate, i);
                 var message = new ServiceBusMessage($"Message {++messageId} at {DateTime.UtcNow:O}")
                 {
                     MessageId = messageId.ToString(),
@@ -37,12 +38,12 @@ public class PublisherService(
                 };
 
                 // Check topology type and add additional application properties if needed
-                if (_topologyType == "CorrelationFilter")
+                if (_options.TopologyType == "CorrelationFilter")
                 {
-                    var splitValues = messageType.Split([';'], StringSplitOptions.RemoveEmptyEntries);
-                    foreach (var value in splitValues)
+                    var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var hierarchyType in hierarchyTypes)
                     {
-                        message.ApplicationProperties[value.Trim()] = true;
+                        message.ApplicationProperties[hierarchyType.Trim()] = true;
                     }
                 }
 
@@ -53,7 +54,7 @@ public class PublisherService(
 
             await sender.SendMessagesAsync(messages, stoppingToken);
             logger.LogInformation("Sent {MessageCount} messages in a single call", messages.Count);
-            
+
             messages.Clear();
 
             var jitter = Random.Shared.Next(50);

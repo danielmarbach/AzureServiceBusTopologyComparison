@@ -13,17 +13,15 @@ public class ServiceBusInitializationService(
     ILogger<ServiceBusInitializationService> logger)
     : IHostedService
 {
-    private readonly string _queueName = options.Value.QueueName;
-    private readonly string _topologyType = options.Value.TopologyType;
-    private readonly string[] _messageTypes = options.Value.MessageTypes;
+    private readonly PublisherOptions _options = options.Value;
     private const string BundleTopicName = "bundle-1";
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await CreateInputQueue(cancellationToken);
 
-        logger.LogInformation("Creating topology: {TopologyType}", _topologyType);
-        switch (_topologyType)
+        logger.LogInformation("Creating topology: {TopologyType}", _options.TopologyType);
+        switch (_options.TopologyType)
         {
             case "SqlFilter":
                 await InitializeSqlFilterTopology(cancellationToken);
@@ -42,18 +40,18 @@ public class ServiceBusInitializationService(
         // Queue initialization
         try
         {
-            if (await adminClient.QueueExistsAsync(_queueName, cancellationToken))
+            if (await adminClient.QueueExistsAsync(_options.QueueName, cancellationToken))
             {
-                logger.LogInformation("Deleting existing queue: {QueueName}", _queueName);
-                await adminClient.DeleteQueueAsync(_queueName, cancellationToken);
+                logger.LogInformation("Deleting existing queue: {QueueName}", _options.QueueName);
+                await adminClient.DeleteQueueAsync(_options.QueueName, cancellationToken);
             }
 
-            logger.LogInformation("Creating queue: {QueueName}", _queueName);
-            await adminClient.CreateQueueAsync(_queueName, cancellationToken);
+            logger.LogInformation("Creating queue: {QueueName}", _options.QueueName);
+            await adminClient.CreateQueueAsync(_options.QueueName, cancellationToken);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error initializing queue: {QueueName}", _queueName);
+            logger.LogError(ex, "Error initializing queue: {QueueName}", _options.QueueName);
             throw;
         }
     }
@@ -70,11 +68,9 @@ public class ServiceBusInitializationService(
 
     private async Task CreateMassTransitTopology(CancellationToken cancellationToken)
     {
-        foreach (var messageType in _messageTypes)
+        for (var i = 0; i < _options.NumberOfMessages; i++)
         {
-            // Create a topic for the message type
-            await CreateTopic(messageType, cancellationToken);
-
+            var messageType = string.Format(_options.MessageTypeTemplate, i);
             // Split the message type into subtypes and create a topic for each
             var splitValues = messageType.Split([';'], StringSplitOptions.RemoveEmptyEntries);
             foreach (var subtype in splitValues)
