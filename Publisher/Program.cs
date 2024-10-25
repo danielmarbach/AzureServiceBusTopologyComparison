@@ -1,6 +1,7 @@
 ﻿using Azure.Identity;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Publisher.Services;
@@ -12,16 +13,11 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.Configure<PublisherOptions>(
     builder.Configuration.GetSection(PublisherOptions.ConfigurationSection));
 
-// Add services to the container
-builder.Services.AddSingleton(sp => 
-    new ServiceBusAdministrationClient(
-        builder.Configuration["ServiceBus:Namespace"]!, 
-        new DefaultAzureCredential()));
-
-builder.Services.AddSingleton(sp => 
-    new ServiceBusClient(
-        builder.Configuration["ServiceBus:Namespace"]!, 
-        new DefaultAzureCredential()));
+builder.Services.AddAzureClients(azureClientBuilder =>
+{
+    azureClientBuilder.AddServiceBusClient(builder.Configuration.GetSection("ServiceBus")["ConnectionString"]);
+    azureClientBuilder.AddServiceBusAdministrationClient(builder.Configuration.GetSection("ServiceBus")["ConnectionString"]);
+});
 
 // Register services in correct order
 builder.Services.AddHostedService<ServiceBusInitializationService>();
