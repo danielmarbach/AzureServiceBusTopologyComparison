@@ -1,0 +1,99 @@
+{{- range .Values.processorGroups }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: message-processor-{{ .name }}
+  labels:
+    app: message-processor
+    group: {{ .name }}
+    {{- include "messageprocessor.labels" $ | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: message-processor
+      group: {{ .name }}
+      {{- include "messageprocessor.selectorLabels" $ | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: message-processor
+        group: {{ .name }}
+        {{- include "messageprocessor.selectorLabels" $ | nindent 8 }}
+    spec:
+      containers:
+      - name: publisher
+        image: {{ $.Values.global.image.registry }}/publisher:{{ $.Values.global.image.tag }}
+        env:
+        - name: ServiceBus__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.global.servicebus.connectionStringSecret }}
+              key: {{ $.Values.global.servicebus.connectionStringKey }}
+        - name: Publisher__TopologyType
+          value: {{ $.Values.global.topology }}
+        - name: Publisher__NumberOfMessages
+          value: {{ $.Values.global.numberOfMessages | quote }}
+        - name: Publisher__MessageTypeTemplate
+          value: {{ .messageTemplate }}
+        - name: Publisher__BundleTopicName
+          value: {{ $.Values.global.bundleTopicName }}
+
+      - name: subscriber1
+        image: {{ $.Values.global.image.registry }}/subscriber:{{ $.Values.global.image.tag }}
+        env:
+        - name: ServiceBus__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.global.servicebus.connectionStringSecret }}
+              key: {{ $.Values.global.servicebus.connectionStringKey }}
+        - name: Subscriber__TopologyType
+          value: {{ $.Values.global.topology }}
+        - name: Subscriber__QueueName
+          value: {{ .queueName }}-1
+        - name: Subscriber__NumberOfMessages
+          value: {{ $.Values.global.numberOfMessages | quote }}
+        - name: Subscriber__MessageTypeTemplate
+          value: {{ .messageTemplate }}
+        - name: Subscriber__BundleTopicName
+          value: {{ $.Values.global.bundleTopicName }}
+
+      - name: subscriber2
+        image: {{ $.Values.global.image.registry }}/subscriber:{{ $.Values.global.image.tag }}
+        env:
+        - name: ServiceBus__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.global.servicebus.connectionStringSecret }}
+              key: {{ $.Values.global.servicebus.connectionStringKey }}
+        - name: Subscriber__TopologyType
+          value: {{ $.Values.global.topology }}
+        - name: Subscriber__QueueName
+          value: {{ .queueName }}-2
+        - name: Subscriber__NumberOfMessages
+          value: {{ $.Values.global.numberOfMessages | quote }}
+        - name: Subscriber__MessageTypeTemplate
+          value: {{ .messageTemplate }}
+        - name: Subscriber__BundleTopicName
+          value: {{ $.Values.global.bundleTopicName }}
+
+      - name: subscriber3
+        image: {{ $.Values.global.image.registry }}/subscriber:{{ $.Values.global.image.tag }}
+        env:
+        - name: ServiceBus__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.global.servicebus.connectionStringSecret }}
+              key: {{ $.Values.global.servicebus.connectionStringKey }}
+        - name: Subscriber__TopologyType
+          value: {{ $.Values.global.topology }}
+        - name: Subscriber__QueueName
+          value: {{ .queueName }}-3
+        - name: Subscriber__NumberOfMessages
+          value: {{ $.Values.global.numberOfMessages | quote }}
+        - name: Subscriber__MessageTypeTemplate
+          value: {{ .messageTemplate }}
+        - name: Subscriber__BundleTopicName
+          value: {{ $.Values.global.bundleTopicName }}              
+{{- end }}

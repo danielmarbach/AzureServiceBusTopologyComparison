@@ -1,0 +1,29 @@
+# Global settings applied to all pub/sub groups
+global:
+  topology: "SqlFilter"
+  bundleTopicName: "bundle-sql"
+  numberOfMessages: 10
+  image:
+    registry: your-registry
+    tag: latest
+  servicebus:
+    connectionStringSecret: servicebus-secrets
+    connectionStringKey: connection-string
+
+# Define multiple publisher/subscriber groups
+processorGroups:
+  - name: orders
+    messageTemplate: "Order.Created.{0};Order.Processed.{0}"
+    queueName: "orders-queue"
+    
+  - name: invoices
+    messageTemplate: "Invoice.Created.{0};Invoice.Paid.{0}"
+    queueName: "invoices-queue"
+    
+  - name: shipments
+    messageTemplate: "Shipment.Created.{0};Shipment.Delivered.{0}"
+    queueName: "shipments-queue"
+    
+  - name: payments
+    messageTemplate: "Payment.Initiated.{0};Payment.Completed.{0}"
+    queueName: "payments-queue"

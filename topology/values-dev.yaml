@@ -1,0 +1,12 @@
+global:
+  topology: "SqlFilter"
+  bundleTopicName: "bundle-sqlfilter-dev"
+  numberOfMessages: 10
+  image:
+    registry: localhost:32000
+    tag: latest
+
+processorGroups:
+  - name: orders-dev
+    messageTemplate: "Publisher.Messages.Test.TestEvent{0};Publisher.Messages.ITestEvent{0};Publisher.Messages.IMyOtherEvent;Publisher.Messages.IEvent"
+    queueName: "orders-queue-dev"

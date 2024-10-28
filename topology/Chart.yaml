@@ -1,0 +1,5 @@
+apiVersion: v2
+name: message-processor
+description: A Helm chart for deploying multiple message processor groups
+version: 0.1.0
+appVersion: "1.0.0"
