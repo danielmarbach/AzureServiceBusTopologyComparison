@@ -17,11 +17,22 @@ public class PublisherService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await using var sender = serviceBusClient.CreateSender(_options.TopologyType == "MassTransit" ? _options.MessageTypeTemplate.Split(';', StringSplitOptions.RemoveEmptyEntries).First() : BundleTopicName);
+        var senders = new ServiceBusSender[_options.NumberOfMessages];
+        for (var i = 0; i < _options.NumberOfMessages; i++)
+        {
+            if (_options.TopologyType == "MassTransit")
+            {
+                var messageType = string.Format(_options.MessageTypeTemplate, i);
+                var destination = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
+                senders[i] = serviceBusClient.CreateSender(destination);
+            }
+            else
+            {
+                senders[i] = serviceBusClient.CreateSender(BundleTopicName);
+            }
+        }
 
         var messageId = 0;
-        var messages = new List<ServiceBusMessage>(_options.NumberOfMessages);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             for (var i = 0; i < _options.NumberOfMessages; i++)
@@ -47,18 +58,20 @@ public class PublisherService(
                     }
                 }
 
-                messages.Add(message);
                 logger.LogInformation("Prepared message {MessageId} with MessageType {MessageType}",
                     messageId, messageType);
+                
+                await senders[i].SendMessageAsync(message, stoppingToken);
+                logger.LogInformation("Sent message with {MessageId} to destination {Destination}", message.MessageId, senders[i].EntityPath);
             }
-
-            await sender.SendMessagesAsync(messages, stoppingToken);
-            logger.LogInformation("Sent {MessageCount} messages in a single call", messages.Count);
-
-            messages.Clear();
 
             var jitter = Random.Shared.Next(50);
             await Task.Delay(200 + jitter, stoppingToken);
+        }
+
+        foreach (var sender in senders)
+        {
+            await sender.DisposeAsync();
         }
     }
 }
