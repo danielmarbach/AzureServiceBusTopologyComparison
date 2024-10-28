@@ -202,12 +202,14 @@ public class ServiceBusInitializationService(
                 .ToList();
             // The assumption here is for simulation reasons that the messages inherit from each other
             // from left to right and the most generic one is the last one. No fancy multi-inheritance here.
+            foreach (var topicName in topicNames)
+            {
+                await CreateTopic(topicName, cancellationToken);
+            }
+
             for (var j = 0; j < topicNames.Count; j++)
             {
                 var topicName = topicNames[j];
-                
-                await CreateTopic(topicName, cancellationToken);
-                
                 var forwardingDestination = j < topicNames.Count - 1
                     ? topicNames[j + 1]
                     : _options.QueueName;
