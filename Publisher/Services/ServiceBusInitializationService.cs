@@ -18,8 +18,6 @@ public class ServiceBusInitializationService(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await CreateInputQueue(cancellationToken);
-
         logger.LogInformation("Creating topology: {TopologyType}", _options.TopologyType);
         switch (_options.TopologyType)
         {
@@ -32,27 +30,6 @@ public class ServiceBusInitializationService(
             case "MassTransit":
                 await CreateMassTransitTopology(cancellationToken);
                 break;
-        }
-    }
-
-    private async Task CreateInputQueue(CancellationToken cancellationToken)
-    {
-        // Queue initialization
-        try
-        {
-            if (await adminClient.QueueExistsAsync(_options.QueueName, cancellationToken))
-            {
-                logger.LogInformation("Deleting existing queue: {QueueName}", _options.QueueName);
-                await adminClient.DeleteQueueAsync(_options.QueueName, cancellationToken);
-            }
-
-            logger.LogInformation("Creating queue: {QueueName}", _options.QueueName);
-            await adminClient.CreateQueueAsync(_options.QueueName, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error initializing queue: {QueueName}", _options.QueueName);
-            throw;
         }
     }
 
