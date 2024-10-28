@@ -197,10 +197,39 @@ public class ServiceBusInitializationService(
         {
             var messageType = string.Format(_options.MessageTypeTemplate, i);
             // Split the message type into subtypes and create a topic for each
-            var splitValues = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var subtype in splitValues)
+            var topicNames = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(subtype => subtype.Trim())
+                .ToList();
+            // The assumption here is for simulation reasons that the messages inherit from each other
+            // from left to right and the most generic one is the last one. No fancy multi-inheritance here.
+            foreach (var topicName in topicNames)
             {
-                await CreateTopic(subtype.Trim(), cancellationToken);
+                await CreateTopic(topicName, cancellationToken);
+            }
+
+            for (var j = 0; j < topicNames.Count; j++)
+            {
+                var topicName = topicNames[j];
+                var forwardingDestination = j < topicNames.Count - 1
+                    ? topicNames[j + 1]
+                    : _options.QueueName;
+                
+                var subscriptionName = $"{forwardingDestination}-sub";
+                var createSubscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
+                {
+                    ForwardTo = forwardingDestination
+                };
+                
+                if (await adminClient.SubscriptionExistsAsync(topicName, subscriptionName, cancellationToken))
+                {
+                    await adminClient.DeleteSubscriptionAsync(topicName, subscriptionName, cancellationToken);
+                }
+
+                logger.LogInformation(
+                    "Creating subscription {SubscriptionName} with forwarding to {ForwardingDestination}",
+                    subscriptionName, forwardingDestination);
+
+                await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
             }
         }
     }
