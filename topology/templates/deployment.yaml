@@ -7,20 +7,20 @@ kind: Deployment
 metadata:
   name: message-processor-{{ $name }}
   labels:
-    app: message-processor-{{ $name }}
+    app: message-processor
     group: {{ .name }}
     {{- include "messageprocessor.labels" $ | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: message-processor-{{ $name }}
+      app: message-processor
       group: {{ .name }}
       {{- include "messageprocessor.selectorLabels" $ | nindent 6 }}
   template:
     metadata:
       labels:
-        app: message-processor-{{ $name }}
+        app: message-processor
         group: {{ .name }}
         {{- include "messageprocessor.selectorLabels" $ | nindent 8 }}
     spec:
