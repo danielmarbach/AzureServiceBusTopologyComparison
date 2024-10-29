@@ -25,18 +25,18 @@ public class PublisherService(
             {
                 var messageType = string.Format(_options.MessageTypeTemplate, i);
                 var destination = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
-                senders[i] = serviceBusClient.CreateSender(destination);
+                senders[i % range.Length] = serviceBusClient.CreateSender(destination);
             }
             else
             {
-                senders[i] = serviceBusClient.CreateSender(BundleTopicName);
+                senders[i % range.Length] = serviceBusClient.CreateSender(BundleTopicName);
             }
         }
 
         var messageId = 0;
         while (!stoppingToken.IsCancellationRequested)
         {
-            foreach (var i in _options.EventRange.ToRange())
+            foreach (var i in range)
             {
                 var messageType = string.Format(_options.MessageTypeTemplate, i);
                 var message = new ServiceBusMessage($"Message {++messageId} at {DateTime.UtcNow:O}")
@@ -62,8 +62,8 @@ public class PublisherService(
                 logger.LogInformation("Prepared message {MessageId} with MessageType {MessageType}",
                     messageId, messageType);
                 
-                await senders[i].SendMessageAsync(message, stoppingToken);
-                logger.LogInformation("Sent message with {MessageId} to destination {Destination}", message.MessageId, senders[i].EntityPath);
+                await senders[i % range.Length].SendMessageAsync(message, stoppingToken);
+                logger.LogInformation("Sent message with {MessageId} to destination {Destination}", message.MessageId, senders[i % range.Length].EntityPath);
             }
 
             var jitter = Random.Shared.Next(50);
