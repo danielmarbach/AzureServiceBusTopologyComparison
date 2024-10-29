@@ -61,4 +61,6 @@ spec:
         - name: Subscriber__BundleTopicName
           value: {{ $.Values.global.bundleTopicName }}
 {{- end }}
+
+---
 {{- end }}
