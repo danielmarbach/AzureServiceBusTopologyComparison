@@ -17,8 +17,9 @@ public class PublisherService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var senders = new ServiceBusSender[_options.NumberOfMessages];
-        for (var i = 0; i < _options.NumberOfMessages; i++)
+        var range = Enumerable.Range(_options.EventRangeBegin, _options.EventRangeEnd - _options.EventRangeBegin + 1).ToArray();
+        var senders = new ServiceBusSender[range.Length];
+        foreach (var i in range)
         {
             if (_options.TopologyType == "MassTransit")
             {
@@ -35,7 +36,7 @@ public class PublisherService(
         var messageId = 0;
         while (!stoppingToken.IsCancellationRequested)
         {
-            for (var i = 0; i < _options.NumberOfMessages; i++)
+            foreach (var i in Enumerable.Range(_options.EventRangeBegin, _options.EventRangeEnd - _options.EventRangeBegin + 1))
             {
                 var messageType = string.Format(_options.MessageTypeTemplate, i);
                 var message = new ServiceBusMessage($"Message {++messageId} at {DateTime.UtcNow:O}")

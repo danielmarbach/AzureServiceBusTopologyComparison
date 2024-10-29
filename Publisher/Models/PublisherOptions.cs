@@ -9,5 +9,7 @@ public class PublisherOptions
     public string MessageTypeTemplate { get; set; } =
         "Publisher.Messages.Test.TestEvent{0};Publisher.Messages.ITestEvent{0};Publisher.Messages.IMyOtherEvent;Publisher.Messages.IEvent";
 
-    public int NumberOfMessages { get; set; } = 4;
+    public int EventRangeBegin { get; set; } = 0;
+
+    public int EventRangeEnd { get; set; } = 3;
 }

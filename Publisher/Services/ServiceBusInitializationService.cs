@@ -45,7 +45,7 @@ public class ServiceBusInitializationService(
 
     private async Task CreateMassTransitTopology(CancellationToken cancellationToken)
     {
-        for (var i = 0; i < _options.NumberOfMessages; i++)
+        foreach (var i in Enumerable.Range(_options.EventRangeBegin, _options.EventRangeEnd - _options.EventRangeBegin + 1))
         {
             var messageType = string.Format(_options.MessageTypeTemplate, i);
             // Split the message type into subtypes and create a topic for each
