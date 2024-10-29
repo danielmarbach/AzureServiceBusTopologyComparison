@@ -10,6 +10,6 @@ processorGroups:
       begin: 0
       end: 3
     subscribers:
-      - subscriber1
-      - subscriber2
-      - subscriber3
+      - subscriber
+      - subscriber
+      - subscriber

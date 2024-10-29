@@ -1,29 +1,31 @@
 {{- range .Values.processorGroups }}
+{{- $processorGroup := . }}
+{{- $name := print $processorGroup.eventRange.begin "" $processorGroup.eventRange.end  -}}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: message-processor-{{ .eventRange.begin | toString }}
+  name: message-processor-{{ $name }}
   labels:
-    app: message-processor
+    app: message-processor-{{ $name }}
     group: {{ .name }}
     {{- include "messageprocessor.labels" $ | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: message-processor
+      app: message-processor-{{ $name }}
       group: {{ .name }}
       {{- include "messageprocessor.selectorLabels" $ | nindent 6 }}
   template:
     metadata:
       labels:
-        app: message-processor
+        app: message-processor-{{ $name }}
         group: {{ .name }}
         {{- include "messageprocessor.selectorLabels" $ | nindent 8 }}
     spec:
       containers:
-      - name: publisher
+      - name: publisher-{{ $name }}
         image: {{ $.Values.global.image.registry }}/publisher:{{ $.Values.global.image.tag }}
         env:
         - name: ServiceBus__ConnectionString
@@ -34,13 +36,13 @@ spec:
         - name: Publisher__TopologyType
           value: {{ $.Values.global.topology }}
         - name: Publisher__EventRange__Begin
-          value: {{ .eventRange.begin | quote }}
+          value: {{ $processorGroup.eventRange.begin | quote }}
         - name: Publisher__EventRange__End
-          value: {{ .eventRange.end | quote }}
+          value: {{ $processorGroup.eventRange.end | quote }}
         - name: Publisher__BundleTopicName
           value: {{ $.Values.global.bundleTopicName }}
 {{- range $index, $subscriber := .subscribers }}
-      - name: {{ $subscriber }}
+      - name: {{ $subscriber }}{{ $name }}{{ $index }}
         image: {{ $.Values.global.image.registry }}/subscriber:{{ $.Values.global.image.tag }}
         env:
         - name: ServiceBus__ConnectionString
@@ -50,6 +52,10 @@ spec:
               key: {{ $.Values.global.servicebus.connectionStringKey }}
         - name: Subscriber__TopologyType
           value: {{ $.Values.global.topology }}
+        - name: Subscriber__EventRange__Begin
+          value: {{ $processorGroup.eventRange.begin }}
+        - name: Subscriber__EventRange__End
+          value: {{ $processorGroup.eventRange.end }}
         - name: Subscriber__BundleTopicName
           value: {{ $.Values.global.bundleTopicName }}
 {{- end }}
