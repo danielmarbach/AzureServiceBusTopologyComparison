@@ -3,7 +3,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: message-processor-{{ .name }}
+  name: message-processor-{{ .eventRange.begin | toString }}
   labels:
     app: message-processor
     group: {{ .name }}
@@ -33,14 +33,14 @@ spec:
               key: {{ $.Values.global.servicebus.connectionStringKey }}
         - name: Publisher__TopologyType
           value: {{ $.Values.global.topology }}
-        - name: Publisher__NumberOfMessages
-          value: {{ $.Values.global.numberOfMessages | quote }}
-        - name: Publisher__MessageTypeTemplate
-          value: {{ .messageTemplate }}
+        - name: Publisher__EventRange__Begin
+          value: {{ .eventRange.begin | quote }}
+        - name: Publisher__EventRange__End
+          value: {{ .eventRange.end | quote }}
         - name: Publisher__BundleTopicName
           value: {{ $.Values.global.bundleTopicName }}
-
-      - name: subscriber1
+{{- range $index, $subscriber := .subscribers }}
+      - name: {{ $subscriber }}
         image: {{ $.Values.global.image.registry }}/subscriber:{{ $.Values.global.image.tag }}
         env:
         - name: ServiceBus__ConnectionString
@@ -50,50 +50,7 @@ spec:
               key: {{ $.Values.global.servicebus.connectionStringKey }}
         - name: Subscriber__TopologyType
           value: {{ $.Values.global.topology }}
-        - name: Subscriber__QueueName
-          value: {{ .queueName }}-1
-        - name: Subscriber__NumberOfMessages
-          value: {{ $.Values.global.numberOfMessages | quote }}
-        - name: Subscriber__MessageTypeTemplate
-          value: {{ .messageTemplate }}
         - name: Subscriber__BundleTopicName
           value: {{ $.Values.global.bundleTopicName }}
-
-      - name: subscriber2
-        image: {{ $.Values.global.image.registry }}/subscriber:{{ $.Values.global.image.tag }}
-        env:
-        - name: ServiceBus__ConnectionString
-          valueFrom:
-            secretKeyRef:
-              name: {{ $.Values.global.servicebus.connectionStringSecret }}
-              key: {{ $.Values.global.servicebus.connectionStringKey }}
-        - name: Subscriber__TopologyType
-          value: {{ $.Values.global.topology }}
-        - name: Subscriber__QueueName
-          value: {{ .queueName }}-2
-        - name: Subscriber__NumberOfMessages
-          value: {{ $.Values.global.numberOfMessages | quote }}
-        - name: Subscriber__MessageTypeTemplate
-          value: {{ .messageTemplate }}
-        - name: Subscriber__BundleTopicName
-          value: {{ $.Values.global.bundleTopicName }}
-
-      - name: subscriber3
-        image: {{ $.Values.global.image.registry }}/subscriber:{{ $.Values.global.image.tag }}
-        env:
-        - name: ServiceBus__ConnectionString
-          valueFrom:
-            secretKeyRef:
-              name: {{ $.Values.global.servicebus.connectionStringSecret }}
-              key: {{ $.Values.global.servicebus.connectionStringKey }}
-        - name: Subscriber__TopologyType
-          value: {{ $.Values.global.topology }}
-        - name: Subscriber__QueueName
-          value: {{ .queueName }}-3
-        - name: Subscriber__NumberOfMessages
-          value: {{ $.Values.global.numberOfMessages | quote }}
-        - name: Subscriber__MessageTypeTemplate
-          value: {{ .messageTemplate }}
-        - name: Subscriber__BundleTopicName
-          value: {{ $.Values.global.bundleTopicName }}              
+{{- end }}
 {{- end }}
