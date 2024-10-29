@@ -1,7 +1,5 @@
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Publisher.Models;
 
@@ -45,7 +43,7 @@ public class ServiceBusInitializationService(
 
     private async Task CreateMassTransitTopology(CancellationToken cancellationToken)
     {
-        foreach (var i in Enumerable.Range(_options.EventRangeBegin, _options.EventRangeEnd - _options.EventRangeBegin + 1))
+        foreach (var i in _options.EventRange.ToRange())
         {
             var messageType = string.Format(_options.MessageTypeTemplate, i);
             // Split the message type into subtypes and create a topic for each

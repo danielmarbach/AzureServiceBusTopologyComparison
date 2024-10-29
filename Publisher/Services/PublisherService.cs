@@ -17,7 +17,7 @@ public class PublisherService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var range = Enumerable.Range(_options.EventRangeBegin, _options.EventRangeEnd - _options.EventRangeBegin + 1).ToArray();
+        var range = _options.EventRange.ToRange();
         var senders = new ServiceBusSender[range.Length];
         foreach (var i in range)
         {
@@ -36,7 +36,7 @@ public class PublisherService(
         var messageId = 0;
         while (!stoppingToken.IsCancellationRequested)
         {
-            foreach (var i in Enumerable.Range(_options.EventRangeBegin, _options.EventRangeEnd - _options.EventRangeBegin + 1))
+            foreach (var i in _options.EventRange.ToRange())
             {
                 var messageType = string.Format(_options.MessageTypeTemplate, i);
                 var message = new ServiceBusMessage($"Message {++messageId} at {DateTime.UtcNow:O}")

@@ -78,7 +78,7 @@ public class ServiceBusInitializationService(
             await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
 
             // Create a correlation filter rule for each split message type
-            foreach (var i in Enumerable.Range(_options.EventRangeBegin, _options.EventRangeEnd - _options.EventRangeBegin + 1))
+            foreach (var i in _options.EventRange.ToRange())
             {
                 var messageType = string.Format(_options.MessageTypeTemplate, i);
                 var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
@@ -153,7 +153,7 @@ public class ServiceBusInitializationService(
                 await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
 
                 // Create a rule for each message type
-                foreach (var i in Enumerable.Range(_options.EventRangeBegin, _options.EventRangeEnd - _options.EventRangeBegin + 1))
+                foreach (var i in _options.EventRange.ToRange())
                 {
                     var messageType = string.Format(_options.MessageTypeTemplate, i);
                     var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
@@ -193,7 +193,7 @@ public class ServiceBusInitializationService(
 
     private async Task CreateMassTransitTopology(CancellationToken cancellationToken)
     {
-        foreach (var i in Enumerable.Range(_options.EventRangeBegin, _options.EventRangeEnd - _options.EventRangeBegin + 1))
+        foreach (var i in _options.EventRange.ToRange())
         {
             var messageType = string.Format(_options.MessageTypeTemplate, i);
             // Split the message type into subtypes and create a topic for each
