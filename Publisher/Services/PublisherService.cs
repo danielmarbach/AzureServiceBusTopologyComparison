@@ -1,3 +1,4 @@
+using System.Threading.RateLimiting;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -31,42 +32,61 @@ public class PublisherService(
                 senders[i % range.Length] = serviceBusClient.CreateSender(_options.BundleTopicName);
             }
         }
+        
+        var rateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = ((int)(range.Length * _options.PublishMultiplier)) + range.Length,
+            QueueLimit = 0,              // No queued requests
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            TokensPerPeriod = (int)(range.Length * _options.PublishMultiplier)
+        });
 
         var messageId = 0;
+        var fromInclusive = range.First();
+        var exclusive = range.Last();
         while (!stoppingToken.IsCancellationRequested)
         {
-            foreach (var i in range)
+            await Parallel.ForAsync(0, range.Length, stoppingToken, async (_, outerToken) =>
             {
-                var messageType = string.Format(_options.MessageTypeTemplate, i);
-                var message = new ServiceBusMessage($"Message {++messageId} at {DateTime.UtcNow:O}")
+                await Parallel.ForAsync(fromInclusive, exclusive, outerToken, async (i, innerToken) =>
                 {
-                    MessageId = messageId.ToString(),
-                    Subject = "test-message",
-                    ApplicationProperties =
+                    // Request permit before creating and sending a message
+                    using var lease = await rateLimiter.AcquireAsync(1, innerToken);
+                    if (!lease.IsAcquired)
                     {
-                        { "MessageType", messageType }
+                        return;
                     }
-                };
 
-                // Check topology type and add additional application properties if needed
-                if (_options.TopologyType == "CorrelationFilter")
-                {
-                    var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
-                    foreach (var hierarchyType in hierarchyTypes)
+                    var messageType = string.Format(_options.MessageTypeTemplate, i);
+                    var incrementedMessageId = Interlocked.Increment(ref messageId);
+                    var message = new ServiceBusMessage($"Message {incrementedMessageId} at {DateTime.UtcNow:O}")
                     {
-                        message.ApplicationProperties[hierarchyType.Trim()] = true;
+                        MessageId = incrementedMessageId.ToString(),
+                        Subject = "test-message",
+                        ApplicationProperties =
+                        {
+                            { "MessageType", messageType }
+                        }
+                    };
+
+                    // Check topology type and add additional application properties if needed
+                    if (_options.TopologyType == "CorrelationFilter")
+                    {
+                        var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var hierarchyType in hierarchyTypes)
+                        {
+                            message.ApplicationProperties[hierarchyType.Trim()] = true;
+                        }
                     }
-                }
 
-                logger.LogInformation("Prepared message {MessageId} with MessageType {MessageType}",
-                    messageId, messageType);
-                
-                await senders[i % range.Length].SendMessageAsync(message, stoppingToken);
-                logger.LogInformation("Sent message with {MessageId} to destination {Destination}", message.MessageId, senders[i % range.Length].EntityPath);
-            }
+                    logger.LogInformation("Prepared message {MessageId} with MessageType {MessageType}",
+                        incrementedMessageId, messageType);
 
-            var jitter = Random.Shared.Next(50);
-            await Task.Delay(200 + jitter, stoppingToken);
+                    await senders[i % range.Length].SendMessageAsync(message, innerToken);
+                    logger.LogInformation("Sent message with {MessageId} to destination {Destination}",
+                        message.MessageId, senders[i % range.Length].EntityPath);
+                });
+            });
         }
 
         foreach (var sender in senders)

@@ -7,6 +7,8 @@ public class PublisherOptions
     public string TopologyType { get; set; } = "SqlFilter";
     
     public string BundleTopicName { get; set; } = "bundle-1";
+    
+    public double PublishMultiplier { get; set; } = 10;
 
     public string MessageTypeTemplate { get; set; } =
         "Publisher.Messages.Test.TestEvent{0};Publisher.Messages.ITestEvent{0};Publisher.Messages.IMyOtherEvent;Publisher.Messages.IEvent";
