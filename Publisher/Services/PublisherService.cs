@@ -32,13 +32,14 @@ public class PublisherService(
                 senders[i % range.Length] = serviceBusClient.CreateSender(_options.BundleTopicName);
             }
         }
-        
+
+        var tokenLimitPerInterval = ((int)(range.Length * _options.PublishMultiplier)) + range.Length + 1;
         var rateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
         {
-            TokenLimit = ((int)(range.Length * _options.PublishMultiplier)) + range.Length,
-            QueueLimit = 0,              // No queued requests
+            TokenLimit = tokenLimitPerInterval,
+            QueueLimit = tokenLimitPerInterval,              // No queued requests
             ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-            TokensPerPeriod = ((int)(range.Length * _options.PublishMultiplier)) + range.Length
+            TokensPerPeriod = tokenLimitPerInterval
         });
 
         var messageId = 0;
@@ -46,24 +47,15 @@ public class PublisherService(
         var exclusive = range.Last();
         while (!stoppingToken.IsCancellationRequested)
         {
+            using var _ = await rateLimiter.AcquireAsync(1, stoppingToken);
+            
             await Parallel.ForAsync(0, range.Length, stoppingToken, async (_, outerToken) =>
             {
-                using var outerLease = await rateLimiter.AcquireAsync(1, outerToken);
-                if (!outerLease.IsAcquired)
-                {
-                    // Delay a bit to not churn CPU
-                    await Task.Delay(50, outerToken);
-                    return;
-                }
-                
+                using var __ = await rateLimiter.AcquireAsync(1, outerToken);
+
                 await Parallel.ForAsync(fromInclusive, exclusive, outerToken, async (i, innerToken) =>
                 {
-                    // Request permit before creating and sending a message
-                    using var innerLease = await rateLimiter.AcquireAsync(1, innerToken);
-                    if (!innerLease.IsAcquired)
-                    {
-                        return;
-                    }
+                    using var ___ = await rateLimiter.AcquireAsync(1, innerToken);
 
                     var messageType = string.Format(_options.MessageTypeTemplate, i);
                     var incrementedMessageId = Interlocked.Increment(ref messageId);
