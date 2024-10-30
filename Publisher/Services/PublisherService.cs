@@ -21,7 +21,13 @@ public class PublisherService(
         var senders = new ServiceBusSender[range.Length];
         foreach (var i in range)
         {
-            if (_options.TopologyType == "MassTransit" || _options.TopologyType == "SNS")
+            // The send destination overrides the bundle topic name.
+            // This mode is primarily used to get a baseline between publishes and direct sends
+            if (_options.SendDestination is not null)
+            {
+                senders[i % range.Length] = serviceBusClient.CreateSender(_options.SendDestination);
+            }
+            else if (_options.TopologyType is "MassTransit" or "SNS")
             {
                 var messageType = string.Format(_options.MessageTypeTemplate, i);
                 var destination = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();

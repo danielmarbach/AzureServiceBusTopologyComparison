@@ -15,6 +15,12 @@ public class ServiceBusInitializationService(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        if (_options.SendDestination is not null)
+        {
+            await CreateSendDestination(cancellationToken);
+            return;
+        }
+        
         logger.LogInformation("Creating topology: {TopologyType}", _options.TopologyType);
         switch (_options.TopologyType)
         {
@@ -30,6 +36,28 @@ public class ServiceBusInitializationService(
             case "SNS":
                 await CreateSNSTopology(cancellationToken);
                 break;
+        }
+    }
+
+    private async Task CreateSendDestination(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Send destination {SendDestination} was set and therefore the topology creation will be skipped.", _options.SendDestination);
+
+        if (await adminClient.QueueExistsAsync(_options.SendDestination, cancellationToken))
+        {
+            logger.LogInformation("Queue already exists: {QueueName}", _options.SendDestination);
+        }
+        else
+        {
+            logger.LogInformation("Creating queue: {QueueName}", _options.SendDestination);
+            try
+            {
+                await adminClient.CreateQueueAsync(_options.SendDestination, cancellationToken);
+            }
+            catch (ServiceBusException e) when (e.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+            {
+                logger.LogInformation("Queue {QueueName} was created by another instance", _options.SendDestination);
+            }
         }
     }
 

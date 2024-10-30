@@ -5,9 +5,11 @@ public class PublisherOptions
     public const string ConfigurationSection = "Publisher";
     public string QueueName { get; set; } = "publisher-queue";
     public string TopologyType { get; set; } = "SqlFilter";
-    
+
     public string BundleTopicName { get; set; } = "bundle-1";
-    
+
+    public string? SendDestination { get; set; } = null;
+
     public double PublishMultiplier { get; set; } = 10;
 
     public string MessageTypeTemplate { get; set; } =
