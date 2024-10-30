@@ -12,7 +12,6 @@ public class ServiceBusInitializationService(
     : IHostedService
 {
     private readonly PublisherOptions _options = options.Value;
-    private const string BundleTopicName = "bundle-1";
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -33,12 +32,12 @@ public class ServiceBusInitializationService(
 
     private async Task InitializeCorrelationFilterTopology(CancellationToken cancellationToken)
     {
-        await CreateTopic(BundleTopicName, cancellationToken);
+        await CreateTopic(_options.BundleTopicName, cancellationToken);
     }
 
     private async Task InitializeSqlFilterTopology(CancellationToken cancellationToken)
     {
-        await CreateTopic(BundleTopicName, cancellationToken);
+        await CreateTopic(_options.BundleTopicName, cancellationToken);
     }
 
     private async Task CreateMassTransitTopology(CancellationToken cancellationToken)

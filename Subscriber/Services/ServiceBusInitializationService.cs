@@ -12,7 +12,6 @@ public class ServiceBusInitializationService(
     : IHostedService
 {
     private readonly SubscriberOptions _options = options.Value;
-    private const string BundleTopicName = "bundle-1";
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -55,20 +54,20 @@ public class ServiceBusInitializationService(
 
     private async Task InitializeCorrelationFilterTopology(CancellationToken cancellationToken)
     {
-        await CreateTopic(BundleTopicName, cancellationToken);
+        await CreateTopic(_options.BundleTopicName, cancellationToken);
 
         // Create or update subscription with correlation filters
         var subscriptionName = $"{_options.QueueName}-sub";
-        var createSubscriptionOptions = new CreateSubscriptionOptions(BundleTopicName, subscriptionName)
+        var createSubscriptionOptions = new CreateSubscriptionOptions(_options.BundleTopicName, subscriptionName)
         {
             ForwardTo = _options.QueueName
         };
 
         try
         {
-            if (await adminClient.SubscriptionExistsAsync(BundleTopicName, subscriptionName, cancellationToken))
+            if (await adminClient.SubscriptionExistsAsync(_options.BundleTopicName, subscriptionName, cancellationToken))
             {
-                await adminClient.DeleteSubscriptionAsync(BundleTopicName, subscriptionName, cancellationToken);
+                await adminClient.DeleteSubscriptionAsync(_options.BundleTopicName, subscriptionName, cancellationToken);
             }
 
             logger.LogInformation(
@@ -96,7 +95,7 @@ public class ServiceBusInitializationService(
 
                     try
                     {
-                        await adminClient.CreateRuleAsync(BundleTopicName, subscriptionName, ruleOptions,
+                        await adminClient.CreateRuleAsync(_options.BundleTopicName, subscriptionName, ruleOptions,
                             cancellationToken);
                     }
                     catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
@@ -111,7 +110,7 @@ public class ServiceBusInitializationService(
             // Delete the default rule if it exists
             try
             {
-                await adminClient.DeleteRuleAsync(BundleTopicName, subscriptionName, "$Default", cancellationToken);
+                await adminClient.DeleteRuleAsync(_options.BundleTopicName, subscriptionName, "$Default", cancellationToken);
             }
             catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
             {
@@ -130,20 +129,20 @@ public class ServiceBusInitializationService(
         // Topic initialization
         try
         {
-            await CreateTopic(BundleTopicName, cancellationToken);
+            await CreateTopic(_options.BundleTopicName, cancellationToken);
 
             // Create or update subscription with forwarding
             var subscriptionName = $"{_options.QueueName}-sub";
-            var createSubscriptionOptions = new CreateSubscriptionOptions(BundleTopicName, subscriptionName)
+            var createSubscriptionOptions = new CreateSubscriptionOptions(_options.BundleTopicName, subscriptionName)
             {
                 ForwardTo = _options.QueueName
             };
 
             try
             {
-                if (await adminClient.SubscriptionExistsAsync(BundleTopicName, subscriptionName, cancellationToken))
+                if (await adminClient.SubscriptionExistsAsync(_options.BundleTopicName, subscriptionName, cancellationToken))
                 {
-                    await adminClient.DeleteSubscriptionAsync(BundleTopicName, subscriptionName, cancellationToken);
+                    await adminClient.DeleteSubscriptionAsync(_options.BundleTopicName, subscriptionName, cancellationToken);
                 }
 
                 logger.LogInformation(
@@ -162,7 +161,7 @@ public class ServiceBusInitializationService(
                         ruleName,
                         new SqlRuleFilter($"[MessageType] LIKE '%{hierarchyTypes[1]}%'"));
 
-                    await adminClient.CreateRuleAsync(BundleTopicName, subscriptionName, ruleOptions,
+                    await adminClient.CreateRuleAsync(_options.BundleTopicName, subscriptionName, ruleOptions,
                         cancellationToken);
                     logger.LogInformation("Created rule {RuleName} for message type {MessageType}",
                         ruleName, messageType);
@@ -171,7 +170,7 @@ public class ServiceBusInitializationService(
                 // Delete the default rule if it exists
                 try
                 {
-                    await adminClient.DeleteRuleAsync(BundleTopicName, subscriptionName, "$Default", cancellationToken);
+                    await adminClient.DeleteRuleAsync(_options.BundleTopicName, subscriptionName, "$Default", cancellationToken);
                 }
                 catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
                 {
@@ -186,7 +185,7 @@ public class ServiceBusInitializationService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error initializing topic: {BundleTopicName}", BundleTopicName);
+            logger.LogError(ex, "Error initializing topic: {BundleTopicName}", _options.BundleTopicName);
             throw;
         }
     }
