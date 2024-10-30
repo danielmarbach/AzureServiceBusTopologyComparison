@@ -1,6 +1,7 @@
 global:
-  topology: "SqlFilter"
-  bundleTopicName: "bundle-sqlfilter-dev"
+  topology: "MassTransit"
+  bundleTopicName: "bundle-masstransit-dev"
+  publishMultiplier: 1
   image:
     registry: localhost:5000
     tag: latest
@@ -19,11 +20,4 @@ processorGroups:
     subscribers:
       - subscriber
       - subscriber
-      - subscriber
-  - eventRange:
-      begin: 8
-      end: 11
-    subscribers:
-      - subscriber
-      - subscriber
-      - subscriber      
+      - subscriber     

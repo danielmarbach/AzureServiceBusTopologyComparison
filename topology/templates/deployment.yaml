@@ -35,6 +35,8 @@ spec:
               key: {{ $.Values.global.servicebus.connectionStringKey }}
         - name: Publisher__TopologyType
           value: {{ $.Values.global.topology }}
+        - name: Publisher__PublishMultiplier
+          value: {{ $.Values.global.publishMultiplier | quote }}          
         - name: Publisher__EventRange__Begin
           value: {{ $processorGroup.eventRange.begin | quote }}
         - name: Publisher__EventRange__End

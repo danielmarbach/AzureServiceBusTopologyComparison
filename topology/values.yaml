@@ -2,7 +2,7 @@
 global:
   topology: "SqlFilter"
   bundleTopicName: "bundle-sql"
-  numberOfMessages: 10
+  publishMultiplier: 1
   image:
     registry: your-registry
     tag: latest
