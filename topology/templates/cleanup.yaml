@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: topology-cleanup-job
+  annotations:
+    "helm.sh/hook": "pre-install"  # Runs before the main install
+    "helm.sh/hook-weight": "-5"    # Ensures it runs before other resources
+spec:
+  template:
+    spec:
+      containers:
+      - name: topology-cleaner
+        image: {{ .Values.global.image.registry }}/topologycleaner:{{ .Values.global.image.tag }}
+        env:
+        - name: ServiceBus__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.global.servicebus.connectionStringSecret }}
+              key: {{ $.Values.global.servicebus.connectionStringKey }}
+      restartPolicy: Never
+  backoffLimit: 1

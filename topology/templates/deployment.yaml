@@ -24,16 +24,6 @@ spec:
         group: {{ .name }}
         {{- include "messageprocessor.selectorLabels" $ | nindent 8 }}
     spec:
-      initContainers:
-      - name: topology-cleaner-{{ $name }}
-        image: {{ $.Values.global.image.registry }}/topologycleaner:{{ $.Values.global.image.tag }}
-        env:
-        - name: ServiceBus__ConnectionString
-          valueFrom:
-            secretKeyRef:
-              name: {{ $.Values.global.servicebus.connectionStringSecret }}
-              key: {{ $.Values.global.servicebus.connectionStringKey }}
-
       containers:
       - name: publisher-{{ $name }}
         image: {{ $.Values.global.image.registry }}/publisher:{{ $.Values.global.image.tag }}
