@@ -13,7 +13,6 @@ public class PublisherService(
     : BackgroundService
 {
     private readonly PublisherOptions _options = options.Value;
-    private const string BundleTopicName = "bundle-1";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -29,7 +28,7 @@ public class PublisherService(
             }
             else
             {
-                senders[i % range.Length] = serviceBusClient.CreateSender(BundleTopicName);
+                senders[i % range.Length] = serviceBusClient.CreateSender(_options.BundleTopicName);
             }
         }
 
