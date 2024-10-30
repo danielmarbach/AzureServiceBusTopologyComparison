@@ -15,7 +15,7 @@ public class ServiceBusInitializationService(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (_options.SendDestination is not null)
+        if (!string.IsNullOrWhiteSpace(_options.SendDestination))
         {
             await CreateSendDestination(cancellationToken);
             return;

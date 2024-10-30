@@ -23,7 +23,7 @@ public class PublisherService(
         {
             // The send destination overrides the bundle topic name.
             // This mode is primarily used to get a baseline between publishes and direct sends
-            if (_options.SendDestination is not null)
+            if (!string.IsNullOrWhiteSpace(_options.SendDestination))
             {
                 senders[i % range.Length] = serviceBusClient.CreateSender(_options.SendDestination);
             }
