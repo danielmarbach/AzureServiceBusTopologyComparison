@@ -38,7 +38,7 @@ public class PublisherService(
             TokenLimit = ((int)(range.Length * _options.PublishMultiplier)) + range.Length,
             QueueLimit = 0,              // No queued requests
             ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-            TokensPerPeriod = (int)(range.Length * _options.PublishMultiplier)
+            TokensPerPeriod = ((int)(range.Length * _options.PublishMultiplier)) + range.Length
         });
 
         var messageId = 0;
@@ -48,11 +48,19 @@ public class PublisherService(
         {
             await Parallel.ForAsync(0, range.Length, stoppingToken, async (_, outerToken) =>
             {
+                using var outerLease = await rateLimiter.AcquireAsync(1, outerToken);
+                if (!outerLease.IsAcquired)
+                {
+                    // Delay a bit to not churn CPU
+                    await Task.Delay(50, outerToken);
+                    return;
+                }
+                
                 await Parallel.ForAsync(fromInclusive, exclusive, outerToken, async (i, innerToken) =>
                 {
                     // Request permit before creating and sending a message
-                    using var lease = await rateLimiter.AcquireAsync(1, innerToken);
-                    if (!lease.IsAcquired)
+                    using var innerLease = await rateLimiter.AcquireAsync(1, innerToken);
+                    if (!innerLease.IsAcquired)
                     {
                         return;
                     }
