@@ -27,6 +27,9 @@ public class ServiceBusInitializationService(
             case "MassTransit":
                 await CreateMassTransitTopology(cancellationToken);
                 break;
+            case "SNS":
+                await CreateSNSTopology(cancellationToken);
+                break;
         }
     }
 
@@ -46,11 +49,22 @@ public class ServiceBusInitializationService(
         {
             var messageType = string.Format(_options.MessageTypeTemplate, i);
             // Split the message type into subtypes and create a topic for each
-            var splitValues = messageType.Split([';'], StringSplitOptions.RemoveEmptyEntries);
+            var splitValues = messageType.Split( new char[';'], StringSplitOptions.RemoveEmptyEntries);
             foreach (var subtype in splitValues)
             {
                 await CreateTopic(subtype.Trim(), cancellationToken);
             }
+        }
+    }
+
+    private async Task CreateSNSTopology(CancellationToken cancellationToken)
+    {
+        foreach (var i in _options.EventRange.ToRange())
+        {
+            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            //Only topic for the most concrete type exists
+            var mostConcreteType = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
+            await CreateTopic(mostConcreteType, cancellationToken);
         }
     }
 

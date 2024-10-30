@@ -21,7 +21,7 @@ public class PublisherService(
         var senders = new ServiceBusSender[range.Length];
         foreach (var i in range)
         {
-            if (_options.TopologyType == "MassTransit")
+            if (_options.TopologyType == "MassTransit" || _options.TopologyType == "SNS")
             {
                 var messageType = string.Format(_options.MessageTypeTemplate, i);
                 var destination = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();

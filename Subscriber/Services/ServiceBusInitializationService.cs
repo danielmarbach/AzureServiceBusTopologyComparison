@@ -29,6 +29,9 @@ public class ServiceBusInitializationService(
             case "MassTransit":
                 await CreateMassTransitTopology(cancellationToken);
                 break;
+            case "SNS":
+                await CreateSNSTopology(cancellationToken);
+                break;
         }
     }
 
@@ -212,13 +215,13 @@ public class ServiceBusInitializationService(
                 var forwardingDestination = j < topicNames.Count - 1
                     ? topicNames[j + 1]
                     : _options.QueueName;
-                
+
                 var subscriptionName = $"{forwardingDestination}-sub";
                 var createSubscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
                 {
                     ForwardTo = forwardingDestination
                 };
-                
+
                 if (await adminClient.SubscriptionExistsAsync(topicName, subscriptionName, cancellationToken))
                 {
                     await adminClient.DeleteSubscriptionAsync(topicName, subscriptionName, cancellationToken);
@@ -230,6 +233,43 @@ public class ServiceBusInitializationService(
 
                 await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
             }
+        }
+    }
+
+    private async Task CreateSNSTopology(CancellationToken cancellationToken)
+    {
+        //Creates multiple subscriptions, one for each concrete event.
+        //This is similar to what SNS does when using the mapping like this one:
+        //MapEvent<TestEvent0>("IMyOtherEvent");
+        //MapEvent<TestEvent1>("IMyOtherEvent"); 
+        //MapEvent<TestEvent2>("IMyOtherEvent"); 
+        //MapEvent<TestEvent3>("IMyOtherEvent"); 
+        foreach (var i in _options.EventRange.ToRange())
+        {
+            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            //Only topic for the most concrete type exists
+            var mostConcreteType = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
+
+            await CreateTopic(mostConcreteType, cancellationToken);
+
+            var forwardingDestination = _options.QueueName;
+            var subscriptionName = $"{forwardingDestination}-sub";
+
+            var createSubscriptionOptions = new CreateSubscriptionOptions(mostConcreteType, subscriptionName)
+            {
+                ForwardTo = forwardingDestination
+            };
+
+            if (await adminClient.SubscriptionExistsAsync(mostConcreteType, subscriptionName, cancellationToken))
+            {
+                await adminClient.DeleteSubscriptionAsync(mostConcreteType, subscriptionName, cancellationToken);
+            }
+
+            logger.LogInformation(
+                "Creating subscription {SubscriptionName} with forwarding to {ForwardingDestination}",
+                subscriptionName, forwardingDestination);
+
+            await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
         }
     }
 
