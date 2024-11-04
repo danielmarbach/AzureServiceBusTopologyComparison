@@ -77,7 +77,7 @@ public class ServiceBusInitializationService(
         {
             var messageType = string.Format(_options.MessageTypeTemplate, i);
             // Split the message type into subtypes and create a topic for each
-            var splitValues = messageType.Split( new char[';'], StringSplitOptions.RemoveEmptyEntries);
+            var splitValues = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
             foreach (var subtype in splitValues)
             {
                 await CreateTopic(subtype.Trim(), cancellationToken);
