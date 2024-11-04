@@ -1,0 +1,184 @@
+global:
+  topology: "SqlFilter"
+  bundleTopicName: "bundle-sqlfilter-dev"
+  publishMultiplier: 5
+  image:
+    registry: acrservicebustopology.azurecr.io
+    tag: latest
+
+processorGroups:
+  - eventRange:
+      begin: 0
+      end: 3
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 4
+      end: 7
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 8
+      end: 11
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 12
+      end: 15
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 16
+      end: 19
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 20
+      end: 23
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 24
+      end: 27
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 28
+      end: 31
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 32
+      end: 35
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 36
+      end: 39
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 40
+      end: 43
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 44
+      end: 47
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 48
+      end: 51
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 52
+      end: 55
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 56
+      end: 59
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 60
+      end: 63
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 64
+      end: 67
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 68
+      end: 71
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 72
+      end: 75
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 76
+      end: 79
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 80
+      end: 83
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 84
+      end: 87
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 88
+      end: 91
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 92
+      end: 95
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
+  - eventRange:
+      begin: 96
+      end: 99
+    subscribers:
+      - subscriber
+      - subscriber
+      - subscriber
