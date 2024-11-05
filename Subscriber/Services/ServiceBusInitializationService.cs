@@ -26,6 +26,9 @@ public class ServiceBusInitializationService(
             case "CorrelationFilter":
                 await InitializeCorrelationFilterTopology(cancellationToken);
                 break;
+            case "CorrelationFilterWithoutInheritance":
+                await InitializeCorrelationFilterWithoutInheritanceTopology(cancellationToken);
+                break;
             case "MassTransit":
                 await CreateMassTransitTopology(cancellationToken);
                 break;
@@ -126,6 +129,75 @@ public class ServiceBusInitializationService(
             throw;
         }
     }
+    private async Task InitializeCorrelationFilterWithoutInheritanceTopology(CancellationToken cancellationToken)
+    {
+        await CreateTopic(_options.BundleTopicName, cancellationToken);
+
+        // Create or update subscription with correlation filters
+        var subscriptionName = $"{_options.QueueName}-sub";
+        var createSubscriptionOptions = new CreateSubscriptionOptions(_options.BundleTopicName, subscriptionName)
+        {
+            ForwardTo = _options.QueueName
+        };
+
+        try
+        {
+            if (await adminClient.SubscriptionExistsAsync(_options.BundleTopicName, subscriptionName, cancellationToken))
+            {
+                await adminClient.DeleteSubscriptionAsync(_options.BundleTopicName, subscriptionName, cancellationToken);
+            }
+
+            logger.LogInformation(
+                "Creating subscription {SubscriptionName} with forwarding to {QueueName}",
+                subscriptionName, _options.QueueName);
+
+            await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
+
+            // Create a correlation filter rule for each split message type
+            foreach (var i in _options.EventRange.ToRange())
+            {
+                var messageType = string.Format(_options.MessageTypeTemplate, i);
+                //Only the most concrete type is of interest
+                var mostConcreteType = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
+
+                var ruleName = $"{mostConcreteType[..Math.Min(mostConcreteType.Length, 50)]}";
+                var ruleOptions = new CreateRuleOptions(
+                    ruleName,
+                    new CorrelationRuleFilter
+                    {
+                        ApplicationProperties = { { mostConcreteType, true } }
+                    });
+
+                try
+                {
+                    await adminClient.CreateRuleAsync(_options.BundleTopicName, subscriptionName, ruleOptions,
+                        cancellationToken);
+                }
+                catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+                {
+                    // Rule exists already, that's fine
+                }
+                logger.LogInformation("Created correlation rule {RuleName} for message type {MessageType}",
+                    ruleName, messageType);
+            }
+
+            // Delete the default rule if it exists
+            try
+            {
+                await adminClient.DeleteRuleAsync(_options.BundleTopicName, subscriptionName, "$Default", cancellationToken);
+            }
+            catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
+            {
+                // Rule doesn't exist, that's fine
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error setting up subscription {SubscriptionName}", subscriptionName);
+            throw;
+        }
+    }
+
 
     private async Task InitializeSqlFilterTopology(CancellationToken cancellationToken)
     {

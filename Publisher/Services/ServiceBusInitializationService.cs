@@ -30,6 +30,9 @@ public class ServiceBusInitializationService(
             case "CorrelationFilter":
                 await InitializeCorrelationFilterTopology(cancellationToken);
                 break;
+            case "CorrelationFilterWithoutInheritance":
+                await InitializeCorrelationFilterWithoutInheritanceTopology(cancellationToken);
+                break;
             case "MassTransit":
                 await CreateMassTransitTopology(cancellationToken);
                 break;
@@ -62,6 +65,11 @@ public class ServiceBusInitializationService(
     }
 
     private async Task InitializeCorrelationFilterTopology(CancellationToken cancellationToken)
+    {
+        await CreateTopic(_options.BundleTopicName, cancellationToken);
+    }
+    
+    private async Task InitializeCorrelationFilterWithoutInheritanceTopology(CancellationToken cancellationToken)
     {
         await CreateTopic(_options.BundleTopicName, cancellationToken);
     }
