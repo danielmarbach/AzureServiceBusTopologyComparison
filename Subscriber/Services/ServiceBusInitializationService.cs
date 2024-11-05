@@ -69,103 +69,23 @@ public class ServiceBusInitializationService(
             ForwardTo = _options.QueueName
         };
 
-        try
+        await CreateSubscription(createSubscriptionOptions, cancellationToken);
+
+        // Create a correlation filter rule for each split message type
+        foreach (var i in _options.EventRange.ToRange())
         {
-            if (await adminClient.SubscriptionExistsAsync(_options.BundleTopicName, subscriptionName, cancellationToken))
+            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var hierarchyType in hierarchyTypes)
             {
-                await adminClient.DeleteSubscriptionAsync(_options.BundleTopicName, subscriptionName, cancellationToken);
-            }
-
-            logger.LogInformation(
-                "Creating subscription {SubscriptionName} with forwarding to {QueueName}",
-                subscriptionName, _options.QueueName);
-
-            await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
-
-            // Create a correlation filter rule for each split message type
-            foreach (var i in _options.EventRange.ToRange())
-            {
-                var messageType = string.Format(_options.MessageTypeTemplate, i);
-                var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (var hierarchyType in hierarchyTypes)
-                {
-                    var hierarchyTypeTrimmed = hierarchyType.Trim();
-                    var ruleName = $"{hierarchyTypeTrimmed[..Math.Min(hierarchyTypeTrimmed.Length, 50)]}";
-                    var ruleOptions = new CreateRuleOptions(
-                        ruleName,
-                        new CorrelationRuleFilter
-                        {
-                            ApplicationProperties = { { hierarchyTypeTrimmed, true } }
-                        });
-
-                    try
-                    {
-                        await adminClient.CreateRuleAsync(_options.BundleTopicName, subscriptionName, ruleOptions,
-                            cancellationToken);
-                    }
-                    catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
-                    {
-                        // Rule exists already, that's fine
-                    }
-                    logger.LogInformation("Created correlation rule {RuleName} for message type {MessageType}",
-                        ruleName, messageType);
-                }
-            }
-
-            // Delete the default rule if it exists
-            try
-            {
-                await adminClient.DeleteRuleAsync(_options.BundleTopicName, subscriptionName, "$Default", cancellationToken);
-            }
-            catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
-            {
-                // Rule doesn't exist, that's fine
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error setting up subscription {SubscriptionName}", subscriptionName);
-            throw;
-        }
-    }
-    private async Task InitializeCorrelationFilterWithoutInheritanceTopology(CancellationToken cancellationToken)
-    {
-        await CreateTopic(_options.BundleTopicName, cancellationToken);
-
-        // Create or update subscription with correlation filters
-        var subscriptionName = $"{_options.QueueName}-sub";
-        var createSubscriptionOptions = new CreateSubscriptionOptions(_options.BundleTopicName, subscriptionName)
-        {
-            ForwardTo = _options.QueueName
-        };
-
-        try
-        {
-            if (await adminClient.SubscriptionExistsAsync(_options.BundleTopicName, subscriptionName, cancellationToken))
-            {
-                await adminClient.DeleteSubscriptionAsync(_options.BundleTopicName, subscriptionName, cancellationToken);
-            }
-
-            logger.LogInformation(
-                "Creating subscription {SubscriptionName} with forwarding to {QueueName}",
-                subscriptionName, _options.QueueName);
-
-            await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
-
-            // Create a correlation filter rule for each split message type
-            foreach (var i in _options.EventRange.ToRange())
-            {
-                var messageType = string.Format(_options.MessageTypeTemplate, i);
-                //Only the most concrete type is of interest
-                var mostConcreteType = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
-
-                var ruleName = $"{mostConcreteType[..Math.Min(mostConcreteType.Length, 50)]}";
+                var hierarchyTypeTrimmed = hierarchyType.Trim();
+                var ruleName = $"{hierarchyTypeTrimmed[..Math.Min(hierarchyTypeTrimmed.Length, 50)]}";
                 var ruleOptions = new CreateRuleOptions(
                     ruleName,
                     new CorrelationRuleFilter
                     {
-                        ApplicationProperties = { { mostConcreteType, true } }
+                        ApplicationProperties = { { hierarchyTypeTrimmed, true } }
                     });
 
                 try
@@ -177,14 +97,115 @@ public class ServiceBusInitializationService(
                 {
                     // Rule exists already, that's fine
                 }
+
                 logger.LogInformation("Created correlation rule {RuleName} for message type {MessageType}",
+                    ruleName, messageType);
+            }
+        }
+
+        // Delete the default rule if it exists
+        try
+        {
+            await adminClient.DeleteRuleAsync(_options.BundleTopicName, subscriptionName, "$Default",
+                cancellationToken);
+        }
+        catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
+        {
+            // Rule doesn't exist, that's fine
+        }
+    }
+
+    private async Task InitializeCorrelationFilterWithoutInheritanceTopology(CancellationToken cancellationToken)
+    {
+        await CreateTopic(_options.BundleTopicName, cancellationToken);
+
+        // Create or update subscription with correlation filters
+        var subscriptionName = $"{_options.QueueName}-sub";
+        var createSubscriptionOptions = new CreateSubscriptionOptions(_options.BundleTopicName, subscriptionName)
+        {
+            ForwardTo = _options.QueueName
+        };
+
+        await CreateSubscription(createSubscriptionOptions, cancellationToken);
+
+        // Create a correlation filter rule for each split message type
+        foreach (var i in _options.EventRange.ToRange())
+        {
+            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            //Only the most concrete type is of interest
+            var mostConcreteType = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
+
+            var ruleName = $"{mostConcreteType[..Math.Min(mostConcreteType.Length, 50)]}";
+            var ruleOptions = new CreateRuleOptions(
+                ruleName,
+                new CorrelationRuleFilter
+                {
+                    ApplicationProperties = { { mostConcreteType, true } }
+                });
+
+            try
+            {
+                await adminClient.CreateRuleAsync(_options.BundleTopicName, subscriptionName, ruleOptions,
+                    cancellationToken);
+            }
+            catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+            {
+                // Rule exists already, that's fine
+            }
+
+            logger.LogInformation("Created correlation rule {RuleName} for message type {MessageType}",
+                ruleName, messageType);
+        }
+
+        // Delete the default rule if it exists
+        try
+        {
+            await adminClient.DeleteRuleAsync(_options.BundleTopicName, subscriptionName, "$Default",
+                cancellationToken);
+        }
+        catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
+        {
+            // Rule doesn't exist, that's fine
+        }
+    }
+
+
+    private async Task InitializeSqlFilterTopology(CancellationToken cancellationToken)
+    {
+        await CreateTopic(_options.BundleTopicName, cancellationToken);
+
+        // Create or update subscription with forwarding
+        var subscriptionName = $"{_options.QueueName}-sub";
+        var createSubscriptionOptions = new CreateSubscriptionOptions(_options.BundleTopicName, subscriptionName)
+        {
+            ForwardTo = _options.QueueName
+        };
+
+        try
+        {
+            await CreateSubscription(createSubscriptionOptions, cancellationToken);
+
+            // Create a rule for each message type
+            foreach (var i in _options.EventRange.ToRange())
+            {
+                var messageType = string.Format(_options.MessageTypeTemplate, i);
+                var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                var ruleName = $"MessageTypeFilter_{i}";
+                var ruleOptions = new CreateRuleOptions(
+                    ruleName,
+                    new SqlRuleFilter($"[MessageType] LIKE '%{hierarchyTypes[1]}%'"));
+
+                await adminClient.CreateRuleAsync(_options.BundleTopicName, subscriptionName, ruleOptions,
+                    cancellationToken);
+                logger.LogInformation("Created rule {RuleName} for message type {MessageType}",
                     ruleName, messageType);
             }
 
             // Delete the default rule if it exists
             try
             {
-                await adminClient.DeleteRuleAsync(_options.BundleTopicName, subscriptionName, "$Default", cancellationToken);
+                await adminClient.DeleteRuleAsync(_options.BundleTopicName, subscriptionName, "$Default",
+                    cancellationToken);
             }
             catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
             {
@@ -194,73 +215,6 @@ public class ServiceBusInitializationService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error setting up subscription {SubscriptionName}", subscriptionName);
-            throw;
-        }
-    }
-
-
-    private async Task InitializeSqlFilterTopology(CancellationToken cancellationToken)
-    {
-        // Topic initialization
-        try
-        {
-            await CreateTopic(_options.BundleTopicName, cancellationToken);
-
-            // Create or update subscription with forwarding
-            var subscriptionName = $"{_options.QueueName}-sub";
-            var createSubscriptionOptions = new CreateSubscriptionOptions(_options.BundleTopicName, subscriptionName)
-            {
-                ForwardTo = _options.QueueName
-            };
-
-            try
-            {
-                if (await adminClient.SubscriptionExistsAsync(_options.BundleTopicName, subscriptionName, cancellationToken))
-                {
-                    await adminClient.DeleteSubscriptionAsync(_options.BundleTopicName, subscriptionName, cancellationToken);
-                }
-
-                logger.LogInformation(
-                    "Creating subscription {SubscriptionName} with forwarding to {QueueName}",
-                    subscriptionName, _options.QueueName);
-
-                await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
-
-                // Create a rule for each message type
-                foreach (var i in _options.EventRange.ToRange())
-                {
-                    var messageType = string.Format(_options.MessageTypeTemplate, i);
-                    var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
-                    var ruleName = $"MessageTypeFilter_{i}";
-                    var ruleOptions = new CreateRuleOptions(
-                        ruleName,
-                        new SqlRuleFilter($"[MessageType] LIKE '%{hierarchyTypes[1]}%'"));
-
-                    await adminClient.CreateRuleAsync(_options.BundleTopicName, subscriptionName, ruleOptions,
-                        cancellationToken);
-                    logger.LogInformation("Created rule {RuleName} for message type {MessageType}",
-                        ruleName, messageType);
-                }
-
-                // Delete the default rule if it exists
-                try
-                {
-                    await adminClient.DeleteRuleAsync(_options.BundleTopicName, subscriptionName, "$Default", cancellationToken);
-                }
-                catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
-                {
-                    // Rule doesn't exist, that's fine
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error setting up subscription {SubscriptionName}", subscriptionName);
-                throw;
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error initializing topic: {BundleTopicName}", _options.BundleTopicName);
             throw;
         }
     }
@@ -294,16 +248,7 @@ public class ServiceBusInitializationService(
                     ForwardTo = forwardingDestination
                 };
 
-                if (await adminClient.SubscriptionExistsAsync(topicName, subscriptionName, cancellationToken))
-                {
-                    await adminClient.DeleteSubscriptionAsync(topicName, subscriptionName, cancellationToken);
-                }
-
-                logger.LogInformation(
-                    "Creating subscription {SubscriptionName} with forwarding to {ForwardingDestination}",
-                    subscriptionName, forwardingDestination);
-
-                await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
+                await CreateSubscription(createSubscriptionOptions, cancellationToken);
             }
         }
     }
@@ -332,16 +277,7 @@ public class ServiceBusInitializationService(
                 ForwardTo = forwardingDestination
             };
 
-            if (await adminClient.SubscriptionExistsAsync(mostConcreteType, subscriptionName, cancellationToken))
-            {
-                await adminClient.DeleteSubscriptionAsync(mostConcreteType, subscriptionName, cancellationToken);
-            }
-
-            logger.LogInformation(
-                "Creating subscription {SubscriptionName} with forwarding to {ForwardingDestination}",
-                subscriptionName, forwardingDestination);
-
-            await adminClient.CreateSubscriptionAsync(createSubscriptionOptions, cancellationToken);
+            await CreateSubscription(createSubscriptionOptions, cancellationToken);
         }
     }
 
@@ -362,6 +298,31 @@ public class ServiceBusInitializationService(
         else
         {
             logger.LogInformation("Topic already exists: {TopicName}", topicName);
+        }
+    }
+
+    private async Task CreateSubscription(CreateSubscriptionOptions subscriptionOptions,
+        CancellationToken cancellationToken)
+    {
+        if (!await adminClient.SubscriptionExistsAsync(subscriptionOptions.TopicName,
+                subscriptionOptions.SubscriptionName, cancellationToken))
+        {
+            try
+            {
+                logger.LogInformation("Creating subscription {SubscriptionName} on {TopicName}",
+                    subscriptionOptions.TopicName, subscriptionOptions.SubscriptionName);
+                await adminClient.CreateSubscriptionAsync(subscriptionOptions, cancellationToken);
+            }
+            catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+            {
+                logger.LogInformation("Subscription {SubscriptionName} on {TopicName} was created by another instance",
+                    subscriptionOptions.TopicName, subscriptionOptions.SubscriptionName);
+            }
+        }
+        else
+        {
+            logger.LogInformation("Subscription {SubscriptionName} on {TopicName} already exists.",
+                subscriptionOptions.TopicName, subscriptionOptions.SubscriptionName);
         }
     }
 
