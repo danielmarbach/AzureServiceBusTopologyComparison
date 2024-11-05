@@ -111,7 +111,10 @@ public class ServiceBusInitializationService(
             try
             {
                 logger.LogInformation("Creating topic: {TopicName}", topicName);
-                await adminClient.CreateTopicAsync(topicName, cancellationToken);
+                await adminClient.CreateTopicAsync(new CreateTopicOptions(topicName)
+                {
+                    MaxSizeInMegabytes = 5*1024,
+                }, cancellationToken);
             }
             catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
             {
