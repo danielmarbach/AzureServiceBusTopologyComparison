@@ -62,6 +62,8 @@ spec:
           value: {{ $processorGroup.eventRange.end | quote }}
         - name: Subscriber__BundleTopicName
           value: {{ $.Values.global.bundleTopicName }}
+        - name: Subscriber__ReceiveMultiplier
+          value: {{ $.Values.global.receiveMultiplier }}          
 {{- end }}
 
 ---

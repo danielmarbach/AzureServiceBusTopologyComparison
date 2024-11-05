@@ -16,9 +16,13 @@ public class SubscriberService : IHostedService
     {
         _logger = logger;
 
+        var range = options.Value.EventRange.ToRange();
+        var limitPerInterval = (int)(range.Length * options.Value.ReceiveMultiplier) + range.Length + 1;
+
         var processorOptions = new ServiceBusProcessorOptions
         {
-            MaxConcurrentCalls = options.Value.MaxConcurrentCalls,
+            MaxConcurrentCalls = limitPerInterval,
+            PrefetchCount = limitPerInterval,
             AutoCompleteMessages = true // Enable autocompletion
         };
 

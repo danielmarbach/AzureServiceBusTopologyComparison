@@ -1,7 +1,8 @@
 global:
-  topology: "MassTransit"
-  bundleTopicName: "bundle-masstransit-dev"
-  publishMultiplier: 1
+  topology: "SqlFilter"
+  bundleTopicName: "bundle-sqlfilter-dev"
+  publishMultiplier: 10
+  receiveMultiplier: 10
   image:
     registry: localhost:5000
     tag: latest

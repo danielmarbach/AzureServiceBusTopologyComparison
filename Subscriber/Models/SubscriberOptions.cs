@@ -13,5 +13,5 @@ public class SubscriberOptions
 
     public EventRange EventRange { get; set; } = new();
 
-    public int MaxConcurrentCalls { get; set; } = Environment.ProcessorCount;
+    public double ReceiveMultiplier { get; set; } = 10;
 }

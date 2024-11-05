@@ -2,6 +2,7 @@ global:
   topology: "SqlFilter"
   bundleTopicName: "bundle-sqlfilter-dev"
   publishMultiplier: 5
+  receiveMultiplier: 5
   image:
     registry: acrservicebustopology.azurecr.io
     tag: latest
