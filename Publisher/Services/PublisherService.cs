@@ -76,7 +76,7 @@ public class PublisherService(
                     };
 
                     // Check topology type and add additional application properties if needed
-                    if (_options.TopologyType == "CorrelationFilter")
+                    if (_options.TopologyType is "CorrelationFilter" or "CorrelationFilterWithoutInheritance")
                     {
                         var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
                         foreach (var hierarchyType in hierarchyTypes)
