@@ -10,7 +10,7 @@ public class PublisherOptions
 
     public string? SendDestination { get; set; } = null;
 
-    public double PublishMultiplier { get; set; } = 10;
+    public int ThroughputPerMinute { get; set; } = 10;
 
     public string MessageTypeTemplate { get; set; } =
         "Publisher.Messages.Test.TestEvent{0};Publisher.Messages.ITestEvent{0};Publisher.Messages.IMyOtherEvent;Publisher.Messages.IEvent";

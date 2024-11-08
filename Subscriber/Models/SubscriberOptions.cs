@@ -13,5 +13,5 @@ public class SubscriberOptions
 
     public EventRange EventRange { get; set; } = new();
 
-    public double ReceiveMultiplier { get; set; } = 10;
+    public int ThroughputPerMinute { get; set; } = 10;
 }

@@ -39,12 +39,12 @@ public class PublisherService(
             }
         }
 
-        var tokenLimitPerInterval = ((int)(range.Length * _options.PublishMultiplier)) + range.Length + 1;
+        var tokenLimitPerInterval = _options.ThroughputPerMinute + range.Length + 1;
         var rateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
         {
             TokenLimit = tokenLimitPerInterval,
             QueueLimit = tokenLimitPerInterval,              // No queued requests
-            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            ReplenishmentPeriod = TimeSpan.FromMinutes(1), // ASB measure interval is 1 min
             TokensPerPeriod = tokenLimitPerInterval
         });
 

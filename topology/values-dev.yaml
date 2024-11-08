@@ -1,8 +1,7 @@
 global:
   topology: "SqlFilter"
   bundleTopicName: "bundle-sqlfilter-dev"
-  publishMultiplier: 10
-  receiveMultiplier: 10
+  throughputPerMinute: 100
   image:
     registry: localhost:5000
     tag: latest

@@ -35,8 +35,8 @@ spec:
               key: {{ $.Values.global.servicebus.connectionStringKey }}
         - name: Publisher__TopologyType
           value: {{ $.Values.global.topology }}
-        - name: Publisher__PublishMultiplier
-          value: {{ $.Values.global.publishMultiplier | quote }}          
+        - name: Publisher__ThroughputPerMinute
+          value: {{ $.Values.global.throughputPerMinute | quote }}          
         - name: Publisher__EventRange__Begin
           value: {{ $processorGroup.eventRange.begin | quote }}
         - name: Publisher__EventRange__End
@@ -62,8 +62,8 @@ spec:
           value: {{ $processorGroup.eventRange.end | quote }}
         - name: Subscriber__BundleTopicName
           value: {{ $.Values.global.bundleTopicName }}
-        - name: Subscriber__ReceiveMultiplier
-          value: {{ $.Values.global.receiveMultiplier | quote }}          
+        - name: Subscriber__ThroughputPerMinute
+          value: {{ $.Values.global.throughputPerMinute | quote }}          
 {{- end }}
 
 ---
