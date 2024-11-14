@@ -29,7 +29,7 @@ public class PublisherService(
             }
             else if (_options.TopologyType is "MassTransit" or "SNS")
             {
-                var messageType = string.Format(_options.MessageTypeTemplate, i);
+                var messageType = string.Format(_options.MessageTypesTemplate, i);
                 var destination = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
                 senders[i % range.Length] = serviceBusClient.CreateSender(destination);
             }
@@ -63,7 +63,7 @@ public class PublisherService(
                 {
                     using var ___ = await rateLimiter.AcquireAsync(1, innerToken);
 
-                    var messageType = string.Format(_options.MessageTypeTemplate, i);
+                    var messageType = string.Format(_options.MessageTypesTemplate, i);
                     var incrementedMessageId = Interlocked.Increment(ref messageId);
                     var message = new ServiceBusMessage($"Message {incrementedMessageId} at {DateTime.UtcNow:O}")
                     {

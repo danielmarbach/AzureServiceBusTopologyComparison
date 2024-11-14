@@ -8,7 +8,7 @@ public class SubscriberOptions
 
     public string BundleTopicName { get; set; } = "bundle-1";
 
-    public string MessageTypeTemplate { get; set; } =
+    public string MessageTypesTemplate { get; set; } =
         "Publisher.Messages.Test.TestEvent{0};Publisher.Messages.ITestEvent{0};Publisher.Messages.IMyOtherEvent;Publisher.Messages.IEvent";
 
     public EventRange EventRange { get; set; } = new();

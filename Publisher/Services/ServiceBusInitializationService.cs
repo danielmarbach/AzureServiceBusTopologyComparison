@@ -83,7 +83,7 @@ public class ServiceBusInitializationService(
     {
         foreach (var i in _options.EventRange.ToRange())
         {
-            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            var messageType = string.Format(_options.MessageTypesTemplate, i);
             // Split the message type into subtypes and create a topic for each
             var splitValues = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
             foreach (var subtype in splitValues)
@@ -97,7 +97,7 @@ public class ServiceBusInitializationService(
     {
         foreach (var i in _options.EventRange.ToRange())
         {
-            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            var messageType = string.Format(_options.MessageTypesTemplate, i);
             //Only topic for the most concrete type exists
             var mostConcreteType = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
             await CreateTopic(mostConcreteType, cancellationToken);

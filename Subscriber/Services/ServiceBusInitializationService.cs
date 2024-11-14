@@ -74,7 +74,7 @@ public class ServiceBusInitializationService(
         // Create a correlation filter rule for each split message type
         foreach (var i in _options.EventRange.ToRange())
         {
-            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            var messageType = string.Format(_options.MessageTypesTemplate, i);
             var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
 
             foreach (var hierarchyType in hierarchyTypes)
@@ -131,7 +131,7 @@ public class ServiceBusInitializationService(
         // Create a correlation filter rule for each split message type
         foreach (var i in _options.EventRange.ToRange())
         {
-            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            var messageType = string.Format(_options.MessageTypesTemplate, i);
             //Only the most concrete type is of interest
             var mostConcreteType = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
 
@@ -188,7 +188,7 @@ public class ServiceBusInitializationService(
             // Create a rule for each message type
             foreach (var i in _options.EventRange.ToRange())
             {
-                var messageType = string.Format(_options.MessageTypeTemplate, i);
+                var messageType = string.Format(_options.MessageTypesTemplate, i);
                 var hierarchyTypes = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries);
                 var ruleName = $"MessageTypeFilter_{i}";
                 var ruleOptions = new CreateRuleOptions(
@@ -223,7 +223,7 @@ public class ServiceBusInitializationService(
     {
         foreach (var i in _options.EventRange.ToRange())
         {
-            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            var messageType = string.Format(_options.MessageTypesTemplate, i);
             // Split the message type into subtypes and create a topic for each
             var topicNames = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries)
                 .Select(subtype => subtype.Trim())
@@ -263,7 +263,7 @@ public class ServiceBusInitializationService(
         //MapEvent<TestEvent3>("IMyOtherEvent"); 
         foreach (var i in _options.EventRange.ToRange())
         {
-            var messageType = string.Format(_options.MessageTypeTemplate, i);
+            var messageType = string.Format(_options.MessageTypesTemplate, i);
             //Only topic for the most concrete type exists
             var mostConcreteType = messageType.Split(';', StringSplitOptions.RemoveEmptyEntries).First().Trim();
 
