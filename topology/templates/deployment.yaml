@@ -43,6 +43,8 @@ spec:
           value: {{ $processorGroup.eventRange.end | quote }}
         - name: Publisher__BundleTopicName
           value: {{ $.Values.global.bundleTopicName }}
+        - name: Publisher__MessageTypesTemplate
+          value: {{ $.Values.global.messageTypesTemplate }}         
 {{- range $index, $subscriber := .subscribers }}
       - name: {{ $subscriber }}{{ $name }}{{ $index }}
         image: {{ $.Values.global.image.registry }}/subscriber:{{ $.Values.global.image.tag }}
@@ -63,7 +65,9 @@ spec:
         - name: Subscriber__BundleTopicName
           value: {{ $.Values.global.bundleTopicName }}
         - name: Subscriber__ThroughputPerMinute
-          value: {{ $.Values.global.throughputPerMinute | quote }}          
+          value: {{ $.Values.global.throughputPerMinute | quote }}
+        - name: Publisher__MessageTypesTemplate
+          value: {{ $.Values.global.messageTypesTemplate }}                      
 {{- end }}
 
 ---

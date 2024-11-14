@@ -1,9 +1,10 @@
 global:
-  topology: "SqlFilter"
-  bundleTopicName: "bundle-sqlfilter"
+  topology: "CorrelationFilter"
+  bundleTopicName: "bundle-correlationfilter"
   throughputPerMinute: 100
+  messageTypesTemplate: "Publisher.Messages.Test.TestEvent{0};Publisher.Messages.ITestEvent{0}"
   image:
-    registry: acrservicebustopology.azurecr.io
+    registry: acrasbeventsub4892.azurecr.io
     tag: latest
 
 processorGroups:
