@@ -66,7 +66,7 @@ spec:
           value: {{ $.Values.global.bundleTopicName }}
         - name: Subscriber__ThroughputPerMinute
           value: {{ $.Values.global.throughputPerMinute | quote }}
-        - name: Publisher__MessageTypesTemplate
+        - name: Subscriber__MessageTypesTemplate
           value: {{ $.Values.global.messageTypesTemplate }}                      
 {{- end }}
 
