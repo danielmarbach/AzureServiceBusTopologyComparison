@@ -35,3 +35,19 @@ By default minikube doesn't cache the images. Restarts of the cluster means the 
 
 ### Prepare values
 
+## Running on AKS
+
+1. Setup AKS cluster
+1. Connect according to the quick start guide in the local shell
+
+### Build containers
+
+```bash
+dotnet publish /t:PublishContainer /p:ContainerRegistry=XYZ.azurecr.io --os linux --arch x64
+```
+
+### Deploy
+
+```bash
+helm install message-processor ./topology -f ./topology/values-acr.yaml
+```
